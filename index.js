@@ -31,7 +31,7 @@ app.use(cors());
 app.use(bodyParser.json());
 
 const corsOptions = {
-  origin: 'http://localhost:3000', // Adjust this based on your frontend's URL
+  origin: 'https://test-ayush7.web.app', // Adjust this based on your frontend's URL
   credentials: true,
 };
 
@@ -44,7 +44,7 @@ const server = app.listen(PORT, () => {
 
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: "https://test-ayush7.web.app",
     methods: ["GET", "POST"],
   },
 }
