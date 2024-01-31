@@ -32,6 +32,11 @@ const userSchema  = new mongoose.Schema({
     enum: ['admin', 'user','guest'],
     default: 'user',
   },
+  id: {
+    type: Number,
+    unique: true,
+    default: () => Math.floor(100 + Math.random() * 900), // Generate a random 3-digit number
+  },
   
   books: [
     {
