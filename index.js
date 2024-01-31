@@ -137,7 +137,7 @@ app.post('/api/login',async (req, res) => {
     const user = await UserModel.findOne({ username });
 
     if (user && bcrypt.compare(password, user.password)) {
-      const token = jwt.sign({ userId: user._id, username: user.username, role: user.role }, jwtSecret, { expiresIn: '1h' });
+      const token = jwt.sign({ userId: user.id, username: user.username, role: user.role }, jwtSecret, { expiresIn: '1h' });
       res.json({ token });
     } else {
       res.status(401).json({ error: 'Invalid credentials' });
@@ -280,7 +280,7 @@ app.get('/api/user', authenticateUser, (req, res) => {
       const { title, author } = req.body;
   
       // Add the book to the user's account
-      const user = await UserModel.findOne({ _id: userId });
+      const user = await UserModel.findOne({ id: userId });
   
       // if (!user) {
       //   return res.status(404).json({ message: 'User not found' });
@@ -302,7 +302,7 @@ app.get('/api/user', authenticateUser, (req, res) => {
       const { userId } = req.params;
   
       // Find the user by ID
-      const user = await UserModel.findOne({ _id: userId });
+      const user = await UserModel.findOne({ id: userId });
   
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
@@ -320,34 +320,55 @@ app.get('/api/user', authenticateUser, (req, res) => {
 
 
   // Fetch User's Books
-app.get('/api/user-books/:userId', async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const user = await UserModel.findById(userId);
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+  app.get('/api/user-books/:userId', async (req, res) => {
+    try {
+      const { userId } = req.params;
+      console.log('Fetching user books for userId:', userId);
+  
+      // Parse userId to a number
+      const parsedUserId = parseInt(userId, 10);
+  
+      // Use parsedUserId to find the user by ID
+      const user = await UserModel.findOne({ id: parsedUserId });
+  
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+  
+      return res.status(200).json({ books: user.books });
+  
+    } catch (error) {
+      console.error('Error fetching user books:', error.message);
+      res.status(500).json({ message: 'Internal server error' });
     }
-
-    return res.status(200).json({ books: user.books });
-  } catch (error) {
-    console.error('Error fetching user books:', error.message);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
+  });
+  
 
 // Delete Book
+const { Types } = require('mongoose');
+
 app.delete('/api/delete-book/:userId/:bookId', async (req, res) => {
   try {
     const { userId, bookId } = req.params;
-    const user = await UserModel.findById(userId);
+    console.log('Deleting book. userId:', userId, 'bookId:', bookId);
+
+    // Convert userId to a number
+    const parsedUserId = parseInt(userId, 10);
+
+    // Find the user by the id field, not _id
+    const user = await UserModel.findOne({ id: parsedUserId });
+
+    console.log('Found user:', user);
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    // Convert bookId to an ObjectId
+    const parsedBookId = new Types.ObjectId(bookId);
+
     // Find the index of the book in the user's books array
-    const bookIndex = user.books.findIndex((book) => book._id.toString() === bookId);
+    const bookIndex = user.books.findIndex((book) => book._id.equals(parsedBookId));
 
     if (bookIndex === -1) {
       return res.status(404).json({ message: 'Book not found for the user' });
@@ -357,12 +378,17 @@ app.delete('/api/delete-book/:userId/:bookId', async (req, res) => {
     user.books.splice(bookIndex, 1);
     await user.save();
 
+    // Now, find and delete the book by _id
+    await BookModel.findByIdAndDelete(parsedBookId);
+
+    console.log('Book deleted successfully');
     return res.status(200).json({ message: 'Book deleted successfully' });
   } catch (error) {
-    console.error('Error deleting book:', error.message);
+    console.error('Error deleting book:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
+
   
 
 
